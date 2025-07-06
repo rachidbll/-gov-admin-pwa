@@ -5,7 +5,7 @@
     "RUN corepack enable",
     "WORKDIR /usr/src/app",
     "COPY package.json pnpm-lock.yaml ./",
-    "RUN pnpm install --frozen-lockfile",
+    "RUN pnpm install",
     "COPY . .",
     "RUN npx prisma migrate deploy",
     "RUN pnpm run build",
