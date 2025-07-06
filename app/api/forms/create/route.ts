@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
 
 interface FormField {
   id: string
@@ -36,26 +39,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Form title and at least one field are required" }, { status: 400 })
     }
 
-    // Generate form ID
-    const formId = `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    // Create form object
-    const form = {
-      id: formId,
-      ...formData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: "draft",
-      submissionCount: 0,
-      version: 1,
-    }
-
-    // In a real application, this would save to a database
-    // For now, we'll simulate saving to localStorage on the client side
+    const newForm = await prisma.form.create({
+      data: {
+        title: formData.title,
+        description: formData.description,
+        fields: formData.fields, // Prisma handles JSON fields automatically
+        settings: formData.settings, // Prisma handles JSON fields automatically
+        status: "draft", // Default status
+        submissionCount: 0, // Default
+        version: 1, // Default
+      },
+    })
 
     return NextResponse.json({
       success: true,
-      form,
+      form: newForm,
       message: "Form created successfully",
     })
   } catch (error) {
@@ -71,53 +69,32 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get("limit") || "10")
     const status = searchParams.get("status")
 
-    // Mock forms data
-    const mockForms = [
-      {
-        id: "form_1",
-        title: "Employee Registration Form",
-        description: "New employee onboarding form",
-        status: "active",
-        submissionCount: 25,
-        createdAt: "2024-01-15T10:00:00Z",
-        updatedAt: "2024-01-15T10:00:00Z",
-      },
-      {
-        id: "form_2",
-        title: "Citizen Service Request",
-        description: "General service request form for citizens",
-        status: "active",
-        submissionCount: 142,
-        createdAt: "2024-01-10T14:30:00Z",
-        updatedAt: "2024-01-12T09:15:00Z",
-      },
-      {
-        id: "form_3",
-        title: "Building Permit Application",
-        description: "Application form for building permits",
-        status: "draft",
-        submissionCount: 0,
-        createdAt: "2024-01-20T16:45:00Z",
-        updatedAt: "2024-01-20T16:45:00Z",
-      },
-    ]
+    const whereClause: any = {}
+    if (status) {
+      whereClause.status = status
+    }
 
-    // Filter by status if provided
-    const filteredForms = status ? mockForms.filter((form) => form.status === status) : mockForms
+    const totalForms = await prisma.form.count({
+      where: whereClause,
+    })
 
-    // Paginate results
-    const startIndex = (page - 1) * limit
-    const endIndex = startIndex + limit
-    const paginatedForms = filteredForms.slice(startIndex, endIndex)
+    const forms = await prisma.form.findMany({
+      where: whereClause,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
 
     return NextResponse.json({
       success: true,
-      forms: paginatedForms,
+      forms,
       pagination: {
         page,
         limit,
-        total: filteredForms.length,
-        totalPages: Math.ceil(filteredForms.length / limit),
+        total: totalForms,
+        totalPages: Math.ceil(totalForms / limit),
       },
     })
   } catch (error) {
