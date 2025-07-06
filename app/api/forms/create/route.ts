@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     const formData: FormData = await request.json()
 
     console.log("DATABASE_URL:", process.env.DATABASE_URL);
+    console.log("Prisma object:", prisma);
 
     // Validate form data
     if (!formData.title || !formData.fields || formData.fields.length === 0) {
