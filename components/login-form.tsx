@@ -84,14 +84,7 @@ export function LoginForm() {
                   Password: <code className="bg-blue-100 px-1 rounded">admin</code>
                 </div>
               </div>
-              <Button
-                variant="link"
-                size="sm"
-                className="p-0 h-auto text-blue-600 mt-2"
-                onClick={fillDefaultCredentials}
-              >
-                Click to fill automatically
-              </Button>
+              
             </AlertDescription>
           </Alert>
 
