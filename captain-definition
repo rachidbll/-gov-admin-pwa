@@ -7,7 +7,6 @@
     "COPY package.json pnpm-lock.yaml ./",
     "RUN pnpm install",
     "COPY . .",
-    "RUN npx prisma migrate deploy",
     "RUN pnpm run build",
     "CMD [\"pnpm\", \"start\"]"
   ]
