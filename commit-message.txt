@@ -1,1 +1,1 @@
-Initial commit
+Add captain-definition for CapRover
