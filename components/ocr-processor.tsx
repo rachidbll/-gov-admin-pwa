@@ -17,7 +17,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "editor" | "filler" | "viewer"
+  role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
 }
 
 interface OCRResult {
@@ -54,52 +54,37 @@ export function OCRProcessor({ user }: OCRProcessorProps) {
     setProgress(0)
 
     try {
-      // Simulate OCR processing with Tesseract.js
+      const formData = new FormData()
+      formData.append("file", file)
+
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
             clearInterval(progressInterval)
             return 90
           }
-          return prev + 10
+          return prev + 5
         })
-      }, 200)
+      }, 100)
 
-      // Simulate OCR processing delay
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      const response = await fetch("/api/ocr/process", {
+        method: "POST",
+        body: formData,
+      })
 
       clearInterval(progressInterval)
       setProgress(100)
 
-      // Mock OCR results
-      const mockResult: OCRResult = {
-        text: `GOVERNMENT FORM - CITIZEN REGISTRATION
-        
-Full Name: John Michael Smith
-Date of Birth: 15/03/1985
-Address: 123 Main Street, Springfield
-Phone: (555) 123-4567
-Email: john.smith@email.com
-Department: Human Resources
-Employee ID: EMP-2024-001
-Signature: [Signature Present]
-
-This form was completed on 2024-01-15
-Processed by: Administrative Office`,
-        confidence: 87.5,
-        fields: {
-          "Full Name": "John Michael Smith",
-          "Date of Birth": "15/03/1985",
-          Address: "123 Main Street, Springfield",
-          Phone: "(555) 123-4567",
-          Email: "john.smith@email.com",
-          Department: "Human Resources",
-          "Employee ID": "EMP-2024-001",
-        },
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to process image")
       }
 
-      setOcrResult(mockResult)
-      setExtractedFields(mockResult.fields)
+      const result = await response.json()
+      const ocrData: OCRResult = result.data
+
+      setOcrResult(ocrData)
+      setExtractedFields(ocrData.fields)
 
       toast({
         title: "OCR Processing Complete",

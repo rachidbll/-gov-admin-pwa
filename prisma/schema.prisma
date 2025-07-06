@@ -14,6 +14,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  EDITOR
+  FILLER
+  VIEWER
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  name              String
+  role              Role      @default(FILLER)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLogin         DateTime?
+  isDefaultPassword Boolean   @default(true)
+}
+
 model Form {
   id              String    @id @default(uuid())
   title           String
@@ -25,4 +44,48 @@ model Form {
   version         Int       @default(1)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model Interview {
+  id           String     @id @default(uuid())
+  intervieweeName String
+  intervieweeId String?
+  location     String?
+  status       String     @default("in-progress") // "in-progress", "completed", "saved"
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  answers      Answer[]
+}
+
+model Question {
+  id           String     @id @default(uuid())
+  text         String
+  type         String     // "multiple-choice", "checkbox", "text", "rating", "yes-no"
+  options      String[]   @default([])
+  required     Boolean    @default(false)
+  condition    Json?      // { dependsOn: "questionId", value: "answerValue" }
+  answers      Answer[]
+}
+
+model Answer {
+  id           String     @id @default(uuid())
+  interviewId  String
+  questionId   String
+  value        Json
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  interview    Interview  @relation(fields: [interviewId], references: [id])
+  question     Question   @relation(fields: [questionId], references: [id])
+}
+
+model GoogleSheetConnection {
+  id        String    @id @default(uuid())
+  name      String
+  sheetId   String
+  formType  String
+  lastSync  DateTime? @updatedAt
+  autoSync  Boolean   @default(true)
+  status    String    @default("connected")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }

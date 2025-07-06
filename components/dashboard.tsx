@@ -30,7 +30,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "editor" | "filler" | "viewer"
+  role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
   isDefaultPassword?: boolean
 }
 

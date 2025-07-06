@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast"
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [govId, setGovId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const { toast } = useToast()
@@ -59,40 +58,7 @@ export function LoginForm() {
     }
   }
 
-  const handleGovLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      const result = await login({ govId, type: "government" })
-
-      if (result?.success) {
-        toast({
-          title: "Authentication Successful",
-          description: "Welcome to Government Administration System",
-        })
-      } else {
-        toast({
-          title: "Authentication Failed",
-          description: result?.error || "Invalid government ID",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Authentication Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const fillDefaultCredentials = () => {
-    setEmail("admin")
-    setPassword("admin")
-  }
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -130,9 +96,8 @@ export function LoginForm() {
           </Alert>
 
           <Tabs defaultValue="email" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-1">
               <TabsTrigger value="email">Email Login</TabsTrigger>
-              <TabsTrigger value="government">Gov ID</TabsTrigger>
             </TabsList>
 
             <TabsContent value="email">
@@ -162,26 +127,6 @@ export function LoginForm() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   <Shield className="mr-2 h-4 w-4" />
                   {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="government">
-              <form onSubmit={handleGovLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="govId">Government ID</Label>
-                  <Input
-                    id="govId"
-                    type="text"
-                    placeholder="GOV-123456789"
-                    value={govId}
-                    onChange={(e) => setGovId(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  <Users className="mr-2 h-4 w-4" />
-                  {isLoading ? "Authenticating..." : "Authenticate"}
                 </Button>
               </form>
             </TabsContent>

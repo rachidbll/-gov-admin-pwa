@@ -29,7 +29,7 @@ interface UserManagementProps {
     id: string
     name: string
     email: string
-    role: "admin" | "editor" | "filler" | "viewer"
+    role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
     createdAt: string
     lastLogin?: string
     isDefaultPassword: boolean
@@ -42,8 +42,9 @@ export function UserManagement({ user }: UserManagementProps) {
       id: string
       name: string
       email: string
-      role: "admin" | "editor" | "filler" | "viewer"
+      role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
       createdAt: string
+      updatedAt: string
       lastLogin?: string
       isDefaultPassword: boolean
     }[]
@@ -54,15 +55,16 @@ export function UserManagement({ user }: UserManagementProps) {
     id: string
     name: string
     email: string
-    role: "admin" | "editor" | "filler" | "viewer"
+    role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
     createdAt: string
+    updatedAt: string
     lastLogin?: string
     isDefaultPassword: boolean
   } | null>(null)
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
-    role: "filler" as const,
+    role: "FILLER" as const,
     govId: "",
   })
   const { createUser, getAllUsers, updateUser, deleteUser } = useAuth()
@@ -72,8 +74,8 @@ export function UserManagement({ user }: UserManagementProps) {
     loadUsers()
   }, [])
 
-  const loadUsers = () => {
-    const allUsers = getAllUsers()
+  const loadUsers = async () => {
+    const allUsers = await getAllUsers()
     setUsers(allUsers)
   }
 
@@ -97,7 +99,7 @@ export function UserManagement({ user }: UserManagementProps) {
         description: `User created successfully. Default password: ${result.defaultPassword}`,
       })
       setIsCreateDialogOpen(false)
-      setNewUser({ name: "", email: "", role: "filler", govId: "" })
+      setNewUser({ name: "", email: "", role: "FILLER", govId: "" })
       loadUsers()
     } else {
       toast({
@@ -168,13 +170,13 @@ export function UserManagement({ user }: UserManagementProps) {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case "admin":
+      case "ADMIN":
         return <Shield className="h-4 w-4 text-red-600" />
-      case "editor":
+      case "EDITOR":
         return <Edit className="h-4 w-4 text-blue-600" />
-      case "filler":
+      case "FILLER":
         return <UserIcon className="h-4 w-4 text-green-600" />
-      case "viewer":
+      case "VIEWER":
         return <UserCheck className="h-4 w-4 text-gray-600" />
       default:
         return <UserIcon className="h-4 w-4" />
@@ -183,20 +185,20 @@ export function UserManagement({ user }: UserManagementProps) {
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case "admin":
+      case "ADMIN":
         return "destructive"
-      case "editor":
+      case "EDITOR":
         return "default"
-      case "filler":
+      case "FILLER":
         return "secondary"
-      case "viewer":
+      case "VIEWER":
         return "outline"
       default:
         return "outline"
     }
   }
 
-  if (user.role !== "admin") {
+  if (user.role !== "ADMIN") {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -262,16 +264,16 @@ export function UserManagement({ user }: UserManagementProps) {
                     <Label htmlFor="create-role">Role *</Label>
                     <Select
                       value={newUser.role}
-                      onValueChange={(value) => setNewUser((prev) => ({ ...prev, role: value as any }))}
+                      onValueChange={(value) => setNewUser((prev) => ({ ...prev, role: value as "ADMIN" | "EDITOR" | "FILLER" | "VIEWER" }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Administrator - Full access</SelectItem>
-                        <SelectItem value="editor">Editor - Create/edit forms</SelectItem>
-                        <SelectItem value="filler">Filler - Fill assigned forms</SelectItem>
-                        <SelectItem value="viewer">Viewer - Read-only access</SelectItem>
+                        <SelectItem value="ADMIN">Administrator - Full access</SelectItem>
+                        <SelectItem value="EDITOR">Editor - Create/edit forms</SelectItem>
+                        <SelectItem value="FILLER">Filler - Fill assigned forms</SelectItem>
+                        <SelectItem value="VIEWER">Viewer - Read-only access</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -422,10 +424,10 @@ export function UserManagement({ user }: UserManagementProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Administrator</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="filler">Filler</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="ADMIN">Administrator</SelectItem>
+                    <SelectItem value="EDITOR">Editor</SelectItem>
+                    <SelectItem value="FILLER">Filler</SelectItem>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

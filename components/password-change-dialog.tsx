@@ -117,7 +117,7 @@ export function PasswordChangeDialog({ open, onOpenChange, required = false }: P
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Enter current password (admin)"
+              placeholder="Enter current password"
               required
             />
           </div>

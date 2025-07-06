@@ -1,13 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
 
 interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "editor" | "filler" | "viewer"
+  role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
   createdAt: string
+  updatedAt: string
   lastLogin?: string
   isDefaultPassword: boolean
 }
@@ -15,71 +19,53 @@ interface User {
 interface LoginCredentials {
   email?: string
   password?: string
-  govId?: string
   type: "email" | "government"
 }
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    // Check for existing session
-    const savedUser = localStorage.getItem("gov-admin-user")
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/auth/session")
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+        }
+      } catch (error) {
+        console.error("Failed to fetch session:", error)
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)
+    fetchUser()
   }, [])
 
   const login = async (credentials: LoginCredentials) => {
     setLoading(true)
-
     try {
-      // Simulate authentication
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      })
 
-      // Check for default admin credentials
-      if (credentials.type === "email" && credentials.email === "admin" && credentials.password === "admin") {
-        const adminUser: User = {
-          id: "admin-1",
-          name: "System Administrator",
-          email: "admin@gov.org",
-          role: "admin",
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          isDefaultPassword: true,
-        }
+      const data = await response.json()
 
-        setUser(adminUser)
-        localStorage.setItem("gov-admin-user", JSON.stringify(adminUser))
-        return { success: true, requiresPasswordChange: false } // Changed from true to false
+      if (response.ok) {
+        setUser(data.user)
+        return { success: true, requiresPasswordChange: data.user.isDefaultPassword }
+      } else {
+        throw new Error(data.error || "Login failed")
       }
-
-      // Check other stored users
-      const storedUsers = JSON.parse(localStorage.getItem("gov-admin-users") || "[]")
-      const foundUser = storedUsers.find(
-        (u: User) =>
-          (credentials.type === "email" && u.email === credentials.email) ||
-          (credentials.type === "government" && u.id === credentials.govId),
-      )
-
-      if (foundUser) {
-        const updatedUser = { ...foundUser, lastLogin: new Date().toISOString() }
-        setUser(updatedUser)
-        localStorage.setItem("gov-admin-user", JSON.stringify(updatedUser))
-
-        // Update user in stored users list
-        const updatedUsers = storedUsers.map((u: User) => (u.id === foundUser.id ? updatedUser : u))
-        localStorage.setItem("gov-admin-users", JSON.stringify(updatedUsers))
-
-        return { success: true, requiresPasswordChange: foundUser.isDefaultPassword }
-      }
-
-      throw new Error("Invalid credentials")
     } catch (error) {
       console.error("Login failed:", error)
-      return { success: false, error: "Invalid credentials" }
+      return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" }
     } finally {
       setLoading(false)
     }
@@ -89,105 +75,134 @@ export function useAuth() {
     if (!user) return { success: false, error: "No user logged in" }
 
     try {
-      // Simulate password change
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: user.id, currentPassword, newPassword }),
+      })
 
-      const updatedUser = { ...user, isDefaultPassword: false }
-      setUser(updatedUser)
-      localStorage.setItem("gov-admin-user", JSON.stringify(updatedUser))
+      const data = await response.json()
 
-      // Update in users list if exists
-      const storedUsers = JSON.parse(localStorage.getItem("gov-admin-users") || "[]")
-      const updatedUsers = storedUsers.map((u: User) => (u.id === user.id ? updatedUser : u))
-      localStorage.setItem("gov-admin-users", JSON.stringify(updatedUsers))
-
-      return { success: true }
+      if (response.ok) {
+        setUser({ ...user, isDefaultPassword: false })
+        return { success: true }
+      } else {
+        throw new Error(data.error || "Failed to change password")
+      }
     } catch (error) {
-      return { success: false, error: "Failed to change password" }
+      console.error("Change password failed:", error)
+      return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" }
     }
   }
 
   const createUser = async (userData: {
     name: string
     email: string
-    role: "admin" | "editor" | "filler" | "viewer"
-    govId?: string
+    role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
   }) => {
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
 
     try {
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        createdAt: new Date().toISOString(),
-        isDefaultPassword: true,
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        return { success: true, user: data.user, defaultPassword: data.defaultPassword }
+      } else {
+        throw new Error(data.error || "Failed to create user")
       }
-
-      const storedUsers = JSON.parse(localStorage.getItem("gov-admin-users") || "[]")
-
-      // Check if user already exists
-      const existingUser = storedUsers.find((u: User) => u.email === userData.email)
-      if (existingUser) {
-        return { success: false, error: "User with this email already exists" }
-      }
-
-      storedUsers.push(newUser)
-      localStorage.setItem("gov-admin-users", JSON.stringify(storedUsers))
-
-      return { success: true, user: newUser, defaultPassword: "admin123" }
     } catch (error) {
-      return { success: false, error: "Failed to create user" }
+      console.error("Create user failed:", error)
+      return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" }
     }
   }
 
-  const getAllUsers = (): User[] => {
-    if (!user || user.role !== "admin") return []
+  const getAllUsers = async (): Promise<User[]> => {
+    if (!user || user.role !== "ADMIN") return []
 
-    const storedUsers = JSON.parse(localStorage.getItem("gov-admin-users") || "[]")
-    // Include the current admin user
-    const adminUser = user.id === "admin-1" ? [user] : []
-    return [...adminUser, ...storedUsers]
+    try {
+      const response = await fetch("/api/users")
+      if (response.ok) {
+        const data = await response.json()
+        return data.users
+      } else {
+        throw new Error(response.statusText)
+      }
+    } catch (error) {
+      console.error("Get all users failed:", error)
+      return []
+    }
   }
 
   const updateUser = async (userId: string, updates: Partial<User>) => {
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
 
     try {
-      const storedUsers = JSON.parse(localStorage.getItem("gov-admin-users") || "[]")
-      const updatedUsers = storedUsers.map((u: User) => (u.id === userId ? { ...u, ...updates } : u))
-      localStorage.setItem("gov-admin-users", JSON.stringify(updatedUsers))
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      })
 
-      return { success: true }
+      const data = await response.json()
+
+      if (response.ok) {
+        return { success: true }
+      } else {
+        throw new Error(data.error || "Failed to update user")
+      }
     } catch (error) {
-      return { success: false, error: "Failed to update user" }
+      console.error("Update user failed:", error)
+      return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" }
     }
   }
 
   const deleteUser = async (userId: string) => {
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "ADMIN") {
       return { success: false, error: "Unauthorized" }
     }
 
     try {
-      const storedUsers = JSON.parse(localStorage.getItem("gov-admin-users") || "[]")
-      const filteredUsers = storedUsers.filter((u: User) => u.id !== userId)
-      localStorage.setItem("gov-admin-users", JSON.stringify(filteredUsers))
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+      })
 
-      return { success: true }
+      const data = await response.json()
+
+      if (response.ok) {
+        return { success: true }
+      } else {
+        throw new Error(data.error || "Failed to delete user")
+      }
     } catch (error) {
-      return { success: false, error: "Failed to delete user" }
+      console.error("Delete user failed:", error)
+      return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" }
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("gov-admin-user")
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+      setUser(null)
+      router.push("/login")
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
   }
 
   return {

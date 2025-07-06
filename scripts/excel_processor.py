@@ -130,14 +130,70 @@ def process_excel_file(file_path_or_buffer):
             'success': False
         }
 
+def process_image_for_ocr(image_buffer):
+    """Simulate OCR processing for an image buffer."""
+    # In a real scenario, you would use an OCR library like Tesseract here.
+    # For now, we return mock data.
+    
+    # Simulate processing delay
+    # time.sleep(1) # Uncomment if you want to simulate a delay
+
+    mock_text = """
+    GOVERNMENT FORM - CITIZEN REGISTRATION
+    
+    Full Name: John Michael Smith
+    Date of Birth: 15/03/1985
+    Address: 123 Main Street, Springfield
+    Phone: (555) 123-4567
+    Email: john.smith@email.com
+    Department: Human Resources
+    Employee ID: EMP-2024-001
+    Signature: [Signature Present]
+
+    This form was completed on 2024-01-15
+    Processed by: Administrative Office
+    """
+    
+    mock_fields = {
+        "Full Name": "John Michael Smith",
+        "Date of Birth": "15/03/1985",
+        "Address": "123 Main Street, Springfield",
+        "Phone": "(555) 123-4567",
+        "Email": "john.smith@email.com",
+        "Department": "Human Resources",
+        "Employee ID": "EMP-2024-001",
+    }
+
+    return {
+        "text": mock_text,
+        "confidence": 87.5,
+        "fields": mock_fields,
+        "success": True
+    }
+
+
 def main():
     """Main function for command line usage"""
-    if len(sys.argv) != 2:
-        print("Usage: python excel_processor.py <excel_file_path>")
+    if len(sys.argv) < 2:
+        print("Usage: python excel_processor.py <mode> <file_path_or_buffer>")
         sys.exit(1)
     
-    file_path = sys.argv[1]
-    result = process_excel_file(file_path)
+    mode = sys.argv[1]
+    
+    if mode == "excel":
+        if len(sys.argv) != 3:
+            print("Usage: python excel_processor.py excel <file_path>")
+            sys.exit(1)
+        file_path = sys.argv[2]
+        result = process_excel_file(file_path)
+    elif mode == "ocr":
+        # For OCR, we expect the image buffer to be passed via stdin
+        image_buffer = sys.stdin.buffer.read()
+        result = process_image_for_ocr(image_buffer)
+    else:
+        print(f"Unknown mode: {mode}")
+        sys.exit(1)
+        
     print(json.dumps(result, indent=2, default=str))
 
 if __name__ == "__main__":

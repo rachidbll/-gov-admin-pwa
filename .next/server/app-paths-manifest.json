@@ -1,0 +1,21 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/change-password/route": "app/api/auth/change-password/route.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/session/route": "app/api/auth/session/route.js",
+  "/api/forms/create/route": "app/api/forms/create/route.js",
+  "/api/forms/upload-excel/route": "app/api/forms/upload-excel/route.js",
+  "/api/google-sheets/[connectionId]/route": "app/api/google-sheets/[connectionId]/route.js",
+  "/api/google-sheets/[connectionId]/sync/route": "app/api/google-sheets/[connectionId]/sync/route.js",
+  "/api/google-sheets/route": "app/api/google-sheets/route.js",
+  "/api/interviews/[interviewId]/answers/route": "app/api/interviews/[interviewId]/answers/route.js",
+  "/api/interviews/[interviewId]/route": "app/api/interviews/[interviewId]/route.js",
+  "/api/interviews/route": "app/api/interviews/route.js",
+  "/api/ocr/process/route": "app/api/ocr/process/route.js",
+  "/api/questions/route": "app/api/questions/route.js",
+  "/api/users/[userId]/route": "app/api/users/[userId]/route.js",
+  "/api/users/route": "app/api/users/route.js",
+  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
+  "/page": "app/page.js"
+}

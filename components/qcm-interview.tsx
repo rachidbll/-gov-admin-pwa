@@ -17,7 +17,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "editor" | "filler" | "viewer"
+  role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
 }
 
 interface Question {
@@ -36,63 +36,48 @@ interface QCMInterviewProps {
   user: User
 }
 
-const mockQuestions: Question[] = [
-  {
-    id: "1",
-    type: "multiple-choice",
-    question: "What is the primary purpose of your visit today?",
-    options: ["New Registration", "Document Renewal", "Information Request", "Complaint Filing"],
-    required: true,
-  },
-  {
-    id: "2",
-    type: "yes-no",
-    question: "Do you have all required documents with you?",
-    options: ["Yes", "No"],
-    required: true,
-  },
-  {
-    id: "3",
-    type: "checkbox",
-    question: "Which services are you interested in? (Select all that apply)",
-    options: ["Online Portal Access", "Email Notifications", "SMS Updates", "Physical Mail"],
-    required: false,
-    condition: {
-      dependsOn: "1",
-      value: "New Registration",
-    },
-  },
-  {
-    id: "4",
-    type: "rating",
-    question: "How would you rate your previous experience with our services?",
-    options: ["1", "2", "3", "4", "5"],
-    required: false,
-  },
-  {
-    id: "5",
-    type: "text",
-    question: "Please provide any additional comments or feedback:",
-    required: false,
-  },
-]
+const mockQuestions: Question[] = []
+
+import { useEffect } from "react"
 
 export function QCMInterview({ user }: QCMInterviewProps) {
   const [isInterviewActive, setIsInterviewActive] = useState(false)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [questions, setQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<{ [key: string]: any }>({})
   const [intervieweeInfo, setIntervieweeInfo] = useState({
     name: "",
     id: "",
     location: "",
   })
+  const [interviewId, setInterviewId] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const { toast } = useToast()
 
-  const currentQuestion = mockQuestions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / mockQuestions.length) * 100
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const response = await fetch("/api/questions")
+        if (!response.ok) {
+          throw new Error("Failed to fetch questions")
+        }
+        const data = await response.json()
+        setQuestions(data.questions)
+      } catch (error) {
+        toast({
+          title: "Error fetching questions",
+          description: error instanceof Error ? error.message : "An unknown error occurred",
+          variant: "destructive",
+        })
+      }
+    }
+    fetchQuestions()
+  }, [toast])
 
-  const startInterview = () => {
+  const currentQuestion = questions[currentQuestionIndex]
+  const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0
+
+  const startInterview = async () => {
     if (!intervieweeInfo.name.trim()) {
       toast({
         title: "Interviewee Information Required",
@@ -101,19 +86,63 @@ export function QCMInterview({ user }: QCMInterviewProps) {
       })
       return
     }
-    setIsInterviewActive(true)
-    setCurrentQuestionIndex(0)
-    setAnswers({})
+
+    try {
+      const response = await fetch("/api/interviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(intervieweeInfo),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to start interview")
+      }
+
+      const data = await response.json()
+      setInterviewId(data.interview.id)
+      setIsInterviewActive(true)
+      setCurrentQuestionIndex(0)
+      setAnswers({})
+    } catch (error) {
+      toast({
+        title: "Error starting interview",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleAnswer = (questionId: string, answer: any) => {
+  const handleAnswer = async (questionId: string, answer: any) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: answer,
     }))
+
+    if (interviewId) {
+      try {
+        await fetch(`/api/interviews/${interviewId}/answers`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ questionId, value: answer }),
+        })
+      } catch (error) {
+        console.error("Failed to save answer:", error)
+        toast({
+          title: "Error saving answer",
+          description: "Your answer could not be saved. Please check your connection.",
+          variant: "destructive",
+        })
+      }
+    }
   }
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
+    if (!currentQuestion) return
+
     if (currentQuestion.required && !answers[currentQuestion.id]) {
       toast({
         title: "Answer Required",
@@ -123,10 +152,10 @@ export function QCMInterview({ user }: QCMInterviewProps) {
       return
     }
 
-    if (currentQuestionIndex < mockQuestions.length - 1) {
+    if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1)
     } else {
-      completeInterview()
+      await completeInterview()
     }
   }
 
@@ -136,21 +165,60 @@ export function QCMInterview({ user }: QCMInterviewProps) {
     }
   }
 
-  const completeInterview = () => {
-    toast({
-      title: "Interview Completed",
-      description: "All responses have been saved and will be synced to Google Sheets.",
-    })
-    setIsInterviewActive(false)
-    setCurrentQuestionIndex(0)
-    setAnswers({})
+  const completeInterview = async () => {
+    if (!interviewId) return
+
+    try {
+      await fetch(`/api/interviews/${interviewId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "completed" }),
+      })
+
+      toast({
+        title: "Interview Completed",
+        description: "All responses have been saved.",
+      })
+      setIsInterviewActive(false)
+      setCurrentQuestionIndex(0)
+      setAnswers({})
+      setInterviewId(null)
+    } catch (error) {
+      console.error("Failed to complete interview:", error)
+      toast({
+        title: "Error completing interview",
+        description: "Could not finalize interview. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const saveProgress = () => {
-    toast({
-      title: "Progress Saved",
-      description: "Interview progress has been saved. You can resume later.",
-    })
+  const saveProgress = async () => {
+    if (!interviewId) return
+
+    try {
+      await fetch(`/api/interviews/${interviewId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "saved" }),
+      })
+
+      toast({
+        title: "Progress Saved",
+        description: "Interview progress has been saved. You can resume later.",
+      })
+    } catch (error) {
+      console.error("Failed to save progress:", error)
+      toast({
+        title: "Error saving progress",
+        description: "Could not save progress. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const shouldShowQuestion = (question: Question) => {
@@ -282,7 +350,7 @@ export function QCMInterview({ user }: QCMInterviewProps) {
               <h3 className="font-medium mb-3">Interview Preview</h3>
               <div className="space-y-2 text-sm">
                 <p>
-                  <strong>Total Questions:</strong> {mockQuestions.length}
+                  <strong>Total Questions:</strong> {questions.length}
                 </p>
                 <p>
                   <strong>Estimated Time:</strong> 5-10 minutes
@@ -322,7 +390,7 @@ export function QCMInterview({ user }: QCMInterviewProps) {
             <div className="flex items-center space-x-2">
               <Badge variant="outline">
                 <Clock className="mr-1 h-3 w-3" />
-                Question {currentQuestionIndex + 1} of {mockQuestions.length}
+                Question {currentQuestionIndex + 1} of {questions.length}
               </Badge>
               {isRecording && (
                 <Badge variant="destructive">
@@ -379,7 +447,7 @@ export function QCMInterview({ user }: QCMInterviewProps) {
         </div>
 
         <Button onClick={nextQuestion}>
-          {currentQuestionIndex === mockQuestions.length - 1 ? (
+          {currentQuestionIndex === questions.length - 1 ? (
             <>
               <CheckCircle className="mr-2 h-4 w-4" />
               Complete Interview

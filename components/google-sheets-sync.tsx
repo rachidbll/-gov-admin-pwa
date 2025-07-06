@@ -16,7 +16,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "editor" | "filler" | "viewer"
+  role: "ADMIN" | "EDITOR" | "FILLER" | "VIEWER"
 }
 
 interface GoogleSheetsConnection {
@@ -35,35 +35,27 @@ interface GoogleSheetsSyncProps {
 
 export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
   const [isConnecting, setIsConnecting] = useState(false)
-  const [connections, setConnections] = useState<GoogleSheetsConnection[]>([
-    {
-      id: "1",
-      name: "Employee Registration Forms",
-      sheetId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-      lastSync: "2 minutes ago",
-      status: "connected",
-      autoSync: true,
-      formType: "Employee Registration",
-    },
-    {
-      id: "2",
-      name: "Citizen Service Requests",
-      sheetId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-      lastSync: "1 hour ago",
-      status: "connected",
-      autoSync: false,
-      formType: "Service Request",
-    },
-    {
-      id: "3",
-      name: "Document Processing Log",
-      sheetId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-      lastSync: "Failed",
-      status: "error",
-      autoSync: true,
-      formType: "OCR Processing",
-    },
-  ])
+  const [connections, setConnections] = useState<GoogleSheetsConnection[]>([])
+
+  useEffect(() => {
+    const fetchConnections = async () => {
+      try {
+        const response = await fetch("/api/google-sheets")
+        if (!response.ok) {
+          throw new Error("Failed to fetch connections")
+        }
+        const data = await response.json()
+        setConnections(data.connections)
+      } catch (error) {
+        toast({
+          title: "Error fetching connections",
+          description: error instanceof Error ? error.message : "An unknown error occurred",
+          variant: "destructive",
+        })
+      }
+    }
+    fetchConnections()
+  }, [toast])
   const [newConnection, setNewConnection] = useState({
     name: "",
     sheetUrl: "",
@@ -93,7 +85,7 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
     }
   }
 
-  const createNewConnection = () => {
+  const createNewConnection = async () => {
     if (!newConnection.name || !newConnection.sheetUrl || !newConnection.formType) {
       toast({
         title: "Missing Information",
@@ -103,23 +95,39 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
       return
     }
 
-    const connection: GoogleSheetsConnection = {
-      id: Date.now().toString(),
-      name: newConnection.name,
-      sheetId: extractSheetId(newConnection.sheetUrl),
-      lastSync: "Never",
-      status: "connected",
-      autoSync: true,
-      formType: newConnection.formType,
+    try {
+      const response = await fetch("/api/google-sheets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newConnection.name,
+          sheetId: extractSheetId(newConnection.sheetUrl),
+          formType: newConnection.formType,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create connection")
+      }
+
+      const data = await response.json()
+      setConnections((prev) => [...prev, data.connection])
+      setNewConnection({ name: "", sheetUrl: "", formType: "" })
+
+      toast({
+        title: "Connection Created",
+        description: "New Google Sheets connection has been established.",
+      })
+    } catch (error) {
+      console.error("Create connection error:", error)
+      toast({
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      })
     }
-
-    setConnections([...connections, connection])
-    setNewConnection({ name: "", sheetUrl: "", formType: "" })
-
-    toast({
-      title: "Connection Created",
-      description: "New Google Sheets connection has been established.",
-    })
   }
 
   const extractSheetId = (url: string): string => {
@@ -134,12 +142,18 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
     )
 
     try {
-      // Simulate sync process
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const response = await fetch(`/api/google-sheets/${connectionId}/sync`, {
+        method: "POST",
+      })
 
+      if (!response.ok) {
+        throw new Error("Failed to sync data")
+      }
+
+      const data = await response.json()
       setConnections(
         connections.map((conn) =>
-          conn.id === connectionId ? { ...conn, status: "connected" as const, lastSync: "Just now" } : conn,
+          conn.id === connectionId ? { ...conn, status: "connected" as const, lastSync: data.connection.lastSync } : conn,
         ),
       )
 
@@ -156,23 +170,75 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
 
       toast({
         title: "Sync Failed",
-        description: "Failed to sync data to Google Sheets. Please check your connection.",
+        description: error instanceof Error ? error.message : "Failed to sync data to Google Sheets. Please check your connection.",
         variant: "destructive",
       })
     }
   }
 
-  const toggleAutoSync = (connectionId: string) => {
-    setConnections(connections.map((conn) => (conn.id === connectionId ? { ...conn, autoSync: !conn.autoSync } : conn)))
-  }
+  const toggleAutoSync = async (connectionId: string) => {
+    const connectionToUpdate = connections.find((conn) => conn.id === connectionId);
+    if (!connectionToUpdate) return;
 
-  const deleteConnection = (connectionId: string) => {
-    setConnections(connections.filter((conn) => conn.id !== connectionId))
-    toast({
-      title: "Connection Removed",
-      description: "Google Sheets connection has been deleted.",
-    })
-  }
+    try {
+      const response = await fetch(`/api/google-sheets/${connectionId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ autoSync: !connectionToUpdate.autoSync }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update auto-sync setting");
+      }
+
+      setConnections(connections.map((conn) =>
+        conn.id === connectionId ? { ...conn, autoSync: !conn.autoSync } : conn
+      ));
+
+      toast({
+        title: "Auto-sync Updated",
+        description: `Auto-sync ${!connectionToUpdate.autoSync ? "enabled" : "disabled"} for ${connectionToUpdate.name}.`,
+      });
+    } catch (error) {
+      console.error("Toggle auto-sync error:", error);
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update auto-sync. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteConnection = async (connectionId: string) => {
+    if (!confirm("Are you sure you want to delete this connection?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/google-sheets/${connectionId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete connection");
+      }
+
+      setConnections(connections.filter((conn) => conn.id !== connectionId));
+      toast({
+        title: "Connection Removed",
+        description: "Google Sheets connection has been deleted.",
+      });
+    } catch (error) {
+      console.error("Delete connection error:", error);
+      toast({
+        title: "Deletion Failed",
+        description: error instanceof Error ? error.message : "Failed to delete connection. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -304,7 +370,7 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">LAST SYNC</Label>
-                      <p>{connection.lastSync}</p>
+                      <p>{connection.lastSync ? new Date(connection.lastSync).toLocaleString() : "Never"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">AUTO SYNC</Label>
@@ -360,19 +426,15 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">156</div>
-              <div className="text-sm text-gray-600">Records Synced Today</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">3</div>
+              <div className="text-2xl font-bold text-green-600">{connections.filter(c => c.status === "connected").length}</div>
               <div className="text-sm text-gray-600">Active Connections</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">2</div>
+              <div className="text-2xl font-bold text-yellow-600">{connections.filter(c => c.status === "syncing").length}</div>
               <div className="text-sm text-gray-600">Pending Syncs</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">1</div>
+              <div className="text-2xl font-bold text-red-600">{connections.filter(c => c.status === "error").length}</div>
               <div className="text-sm text-gray-600">Failed Syncs</div>
             </div>
           </div>
