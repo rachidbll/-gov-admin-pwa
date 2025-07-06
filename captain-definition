@@ -7,6 +7,7 @@
     "COPY package.json pnpm-lock.yaml ./",
     "RUN pnpm install",
     "COPY . .",
+    "ENV PRISMA_CLIENT_ENGINE_TYPE=node",
     "RUN npx prisma generate",
     "RUN pnpm run build",
     "CMD [\"pnpm\", \"start\"]"
