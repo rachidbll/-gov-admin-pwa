@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "../../../lib/prisma"
 
 interface FormField {
   id: string
@@ -33,6 +31,8 @@ interface FormData {
 export async function POST(request: NextRequest) {
   try {
     const formData: FormData = await request.json()
+
+    console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
     // Validate form data
     if (!formData.title || !formData.fields || formData.fields.length === 0) {
