@@ -36,7 +36,32 @@ interface GoogleSheetsSyncProps {
 export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [connections, setConnections] = useState<GoogleSheetsConnection[]>([])
+  const [newConnection, setNewConnection] = useState({
+    name: "",
+    sheetUrl: "",
+    formType: "",
+  })
   const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchConnections = async () => {
+      try {
+        const response = await fetch("/api/google-sheets")
+        if (!response.ok) {
+          throw new Error("Failed to fetch connections")
+        }
+        const data = await response.json()
+        setConnections(data.connections)
+      } catch (error) {
+        toast({
+          title: "Error fetching connections",
+          description: error instanceof Error ? error.message : "An unknown error occurred",
+          variant: "destructive",
+        })
+      }
+    }
+    fetchConnections()
+  }, [])
 
   const connectGoogleAccount = async () => {
     setIsConnecting(true)
