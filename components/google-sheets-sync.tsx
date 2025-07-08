@@ -207,10 +207,7 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
             </Badge>
           </div>
 
-          <Button variant="outline" onClick={connectGoogleAccount} disabled={isConnecting}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isConnecting ? "animate-spin" : ""}`} />
-            {isConnecting ? "Reconnecting..." : "Reconnect Account"}
-          </Button>
+          
         </CardContent>
       </Card>
 
