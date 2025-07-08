@@ -201,10 +201,9 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
                 <p className="text-sm text-gray-600">{user.email}</p>
               </div>
             </div>
-            <Badge variant="default">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Connected
-            </Badge>
+            <Button variant="outline" onClick={() => window.location.href = '/api/auth/google'}>
+              Connect Google Account
+            </Button>
           </div>
 
           
