@@ -78,3 +78,30 @@ Based on my analysis of the code, here are the functionalities that are not full
     *   **CapRover Deployment Configuration:** Updated `captain-definition` to include `RUN npx prisma migrate deploy` for automatic migrations during deployment.
 
 **Current Status:** The backend for the Form Creator is implemented, using Prisma to interact with a PostgreSQL database. The `captain-definition` file is updated for automatic migrations on CapRover deployment.
+---
+**Chat History - Google Sheets Integration Debugging**
+
+**Goal:** Debug and fix the Google Sheets integration component.
+
+**Issues Identified:**
+
+1.  **`ReferenceError: useEffect is not defined`:** A critical client-side error preventing the component from rendering.
+2.  **Missing PWA Icon:** A 404 error for `/icon-512x512.png`.
+3.  **Deprecated Meta Tag:** A warning about an outdated `apple-mobile-web-app-capable` meta tag.
+
+**Steps Taken:**
+
+1.  **`useEffect` Fix:**
+    *   Initially suspected `components/qcm-interview.tsx`, but the import was correct.
+    *   Identified `components/google-sheets-sync.tsx` as the source of the error.
+    *   Added `useEffect` to the `react` import in `components/google-sheets-sync.tsx`.
+    *   Simplified the component to isolate the error, which caused a `newConnection` reference error.
+    *   Corrected the component by restoring the `useEffect` and `useState` hooks in the proper order.
+
+2.  **PWA Icon Fix:**
+    *   Created a placeholder `icon-512x512.png` file in the `public` directory to resolve the 404 error.
+
+3.  **Meta Tag Fix:**
+    *   Updated the deprecated `apple-mobile-web-app-capable` meta tag to `mobile-web-app-capable` in `app/layout.tsx`.
+
+**Current Status:** The Google Sheets tab now renders without crashing. The next step is to replace the mock data and simulated API calls with a real Google Sheets API integration.

@@ -63,27 +63,7 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
     fetchConnections()
   }, [])
 
-  const connectGoogleAccount = async () => {
-    setIsConnecting(true)
-
-    try {
-      // Simulate OAuth flow
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      toast({
-        title: "Google Account Connected",
-        description: "Successfully connected to Google Sheets. You can now create new connections.",
-      })
-    } catch (error) {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect to Google account. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsConnecting(false)
-    }
-  }
+  
 
   const createNewConnection = async () => {
     if (!newConnection.name || !newConnection.sheetUrl || !newConnection.formType) {
@@ -136,45 +116,7 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
     return match ? match[1] : url
   }
 
-  const syncConnection = async (connectionId: string) => {
-    setConnections(
-      connections.map((conn) => (conn.id === connectionId ? { ...conn, status: "syncing" as const } : conn)),
-    )
-
-    try {
-      const response = await fetch(`/api/google-sheets/${connectionId}/sync`, {
-        method: "POST",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to sync data")
-      }
-
-      const data = await response.json()
-      setConnections(
-        connections.map((conn) =>
-          conn.id === connectionId ? { ...conn, status: "connected" as const, lastSync: data.connection.lastSync } : conn,
-        ),
-      )
-
-      toast({
-        title: "Sync Complete",
-        description: "Data has been successfully synced to Google Sheets.",
-      })
-    } catch (error) {
-      setConnections(
-        connections.map((conn) =>
-          conn.id === connectionId ? { ...conn, status: "error" as const, lastSync: "Failed" } : conn,
-        ),
-      )
-
-      toast({
-        title: "Sync Failed",
-        description: error instanceof Error ? error.message : "Failed to sync data to Google Sheets. Please check your connection.",
-        variant: "destructive",
-      })
-    }
-  }
+  
 
   const toggleAutoSync = async (connectionId: string) => {
     const connectionToUpdate = connections.find((conn) => conn.id === connectionId);
