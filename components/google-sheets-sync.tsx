@@ -202,7 +202,7 @@ export function GoogleSheetsSync({ user }: GoogleSheetsSyncProps) {
               </div>
             </div>
             <Button variant="outline" onClick={() => window.location.href = '/api/auth/google'}>
-              Connect Google Account
+              Reconnect Account
             </Button>
           </div>
 
