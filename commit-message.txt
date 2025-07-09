@@ -1,1 +1,2 @@
 Add captain-definition for CapRover
+save tips here of how tofixed the envirement variables 
